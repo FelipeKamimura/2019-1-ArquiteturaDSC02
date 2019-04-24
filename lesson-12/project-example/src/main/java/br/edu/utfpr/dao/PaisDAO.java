@@ -6,131 +6,85 @@ import java.sql.DriverManager;
 import br.edu.utfpr.dto.PaisDTO;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import lombok.extern.java.Log;
 
 @Log
-public class PaisDAO {
+public class PaisDAO extends DAO{
 
-    // Responsável por criar a tabela País no banco
     public PaisDAO() {
-        try ( Connection conn = DriverManager.getConnection("jdbc:derby:memory:database;create=true")) {
+        try (Connection conn = DriverManager.getConnection("jdbc:derby:memory:database;create=true")) {
 
             log.info("Criando tabela pais ...");
             conn.createStatement().executeUpdate(
-                    "CREATE TABLE pais ("
-                    + "id int NOT NULL GENERATED ALWAYS AS IDENTITY CONSTRAINT id_pais_pk PRIMARY KEY,"
-                    + "nome varchar(255),"
-                    + "sigla varchar(3),"
-                    + "codigoTelefone int)");
-
+            "CREATE TABLE pais (" +
+		"id int NOT NULL GENERATED ALWAYS AS IDENTITY CONSTRAINT id_pais_pk PRIMARY KEY," +
+		"nome varchar(255)," +
+		"sigla varchar(3)," + 
+		"codigoTelefone int)");
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    public boolean incluir(PaisDTO pais) {
-        try ( Connection conn = DriverManager.getConnection("jdbc:derby:memory:database")) {
-
-            String sql = "INSERT INTO pais (nome, sigla, codigoTelefone) VALUES (?, ?, ?)";
-
-            PreparedStatement statement = conn.prepareStatement(sql);
-            statement.setString(1, pais.getNome());
-            statement.setString(2, pais.getSigla());
-            statement.setInt(3, pais.getCodigoTelefone());
-
-            int rowsInserted = statement.executeUpdate();
-
-            if (rowsInserted > 0) {
-                return true;
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return false;
-    }
-
-    public List<PaisDTO> listarTodos() {
-
-        List<PaisDTO> resultado = new ArrayList<>();
-
-        try ( Connection conn = DriverManager.getConnection("jdbc:derby:memory:database")) {
-
-            String sql = "SELECT * FROM pais";
-
-            Statement statement = conn.createStatement();
-            ResultSet result = statement.executeQuery(sql);
-
-            int count = 0;
-
-            while (result.next()) {
-
-                resultado.add(
-                        PaisDTO.builder()
-                                .codigoTelefone(result.getInt("codigoTelefone"))
-                                .id(result.getInt("id"))
-                                .nome(result.getString("nome"))
-                                .sigla(result.getString("sigla"))
-                                .build()
-                );
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return resultado;
-    }
-
-    public boolean excluir(int id) {
-
-        try ( Connection conn = DriverManager.getConnection("jdbc:derby:memory:database")) {
-
-            String sql = "DELETE FROM pais WHERE id=?";
-
-            PreparedStatement statement = conn.prepareStatement(sql);
-            statement.setInt(1, id);
-
-            int rowsDeleted = statement.executeUpdate();
-            if (rowsDeleted > 0) {
-                return true;
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return false;
-    }
-
-    public boolean alterar(PaisDTO pais) {
-        try ( Connection conn = DriverManager.getConnection("jdbc:derby:memory:database")) {
-
-            String sql = "UPDATE pais SET nome=?, sigla=?, codigoTelefone=? WHERE id=?";
-
-            PreparedStatement statement = conn.prepareStatement(sql);
-            statement.setString(1, pais.getNome());
-            statement.setString(2, pais.getSigla());
-            statement.setInt(3, pais.getCodigoTelefone());
-            statement.setInt(4, pais.getId());
-
-            int rowsUpdated = statement.executeUpdate();
-            if (rowsUpdated > 0) 
-                return true;
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        
-        return false;
     }
     
-    public PaisDTO listarPorId (int id) {
-        return this.listarTodos().stream().filter(p -> p.getId() == id).findAny().orElseThrow(RuntimeException::new);
+    @Override
+    String sqlIncluir(){
+        return "INSERT INTO pais (nome, sigla, codigoTelefone) VALUES (?, ?, ?)";
     }
+    
+    @Override
+    PreparedStatement defineStatementIncluir (Object dto, Connection conn, String sql) throws SQLException{
+            PreparedStatement statement = conn.prepareStatement(sql);
+            PaisDTO pais = (PaisDTO) dto;
+            statement.setString(1, pais.getNome());
+            statement.setString(2, pais.getSigla());
+            statement.setInt(3, pais.getCodigoTelefone());
+        return statement;
+    }
+    @Override
+    String sqlListarTodos(){
+        return "SELECT * FROM pais";
+    }
+    
+    
+    PaisDTO retornaObjetoListAll(ResultSet result){
+        try {
+            return  PaisDTO.builder()
+                    .codigoTelefone(result.getInt("codigoTelefone"))
+                    .id(result.getInt("id"))
+                    .nome(result.getString("nome"))
+                    .sigla(result.getString("sigla"))
+                    .build();
+        } catch (SQLException ex) {
+            Logger.getLogger(PaisDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
+    }
+    
+    @Override
+    String sqlExcluir(){
+       return "DELETE FROM pais WHERE id=?";
+    }
+    
+    @Override
+    String sqlAlterar(){
+        return "UPDATE pais SET nome=?, sigla=?, codigoTelefone=? WHERE id=?";
+    }
+    @Override
+    PreparedStatement defineStatementAlterar (Object dto, Connection conn, String sql)throws SQLException{
+        PaisDTO pais = (PaisDTO) dto;
+        PreparedStatement statement = conn.prepareStatement(sql);
+            statement.setString(1, pais.getNome());
+            statement.setString(2, pais.getSigla());
+            statement.setInt(3, pais.getCodigoTelefone());
+            return statement;
+    }
+
+   
 
 }
